@@ -1,0 +1,79 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-95f60f9e7e5c0e3b8335.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "Endless_Maze",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "Endless_Maze::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Endless_Maze-Debug-abab99660bcb3cbce608.json",
+					"name" : "Endless_Maze",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Endless_Maze_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Endless_Maze_autogen-Debug-33c20d2efec1ee915434.json",
+					"name" : "Endless_Maze_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Endless_Maze_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Endless_Maze_autogen_timestamp_deps-Debug-44431b8f7b11b585a38e.json",
+					"name" : "Endless_Maze_autogen_timestamp_deps",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "D:/Programming/Projects/QtProjects/Endless_Maze/Endless_Maze/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug",
+		"source" : "D:/Programming/Projects/QtProjects/Endless_Maze/Endless_Maze"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

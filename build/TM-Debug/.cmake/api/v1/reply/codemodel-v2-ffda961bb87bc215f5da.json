@@ -1,0 +1,79 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-13c87d9115938ebfc20c.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "Endless_Maze",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "Endless_Maze::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Endless_Maze-Debug-5ebc95cfe40a736d349f.json",
+					"name" : "Endless_Maze",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Endless_Maze_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Endless_Maze_autogen-Debug-4ea0f472c8b4925ce8ac.json",
+					"name" : "Endless_Maze_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Endless_Maze_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Endless_Maze_autogen_timestamp_deps-Debug-50e3dc0aa8b172d2d04e.json",
+					"name" : "Endless_Maze_autogen_timestamp_deps",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/sergey/Endless_Maze/build/TM-Debug",
+		"source" : "/home/sergey/Endless_Maze"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

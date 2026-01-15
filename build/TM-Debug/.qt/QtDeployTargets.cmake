@@ -1,0 +1,2 @@
+set(__QT_DEPLOY_TARGET_Endless_Maze_FILE /home/sergey/Endless_Maze/build/TM-Debug/Endless_Maze)
+set(__QT_DEPLOY_TARGET_Endless_Maze_TYPE EXECUTABLE)

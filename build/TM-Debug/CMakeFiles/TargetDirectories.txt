@@ -1,0 +1,9 @@
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/Endless_Maze.dir
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/edit_cache.dir
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/rebuild_cache.dir
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/list_install_components.dir
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/install.dir
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/install/local.dir
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/install/strip.dir
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/Endless_Maze_autogen_timestamp_deps.dir
+/home/sergey/Endless_Maze/build/TM-Debug/CMakeFiles/Endless_Maze_autogen.dir
