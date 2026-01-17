@@ -9,20 +9,17 @@
 
 std::mt19937 rng(std::random_device{}());
 
-// настройки
 const float CONTINUE_PROB = 0.40f;
 
-// направления
 const QPointF dirVec[4] = {
-    {  1,  0 },  // R
-    { -1,  0 },  // L
-    {  0, -1 },  // U
-    {  0,  1 }   // D
+    {  1,  0 },
+    { -1,  0 },
+    {  0, -1 },
+    {  0,  1 }
 };
 
 int opposite(int d) { return d ^ 1; }
 
-// ключ точки
 uint64_t key(const QPointF& p, float step)
 {
     int x = int(std::round(p.x() / step));
@@ -30,9 +27,8 @@ uint64_t key(const QPointF& p, float step)
     return (uint64_t(uint32_t(x)) << 32) | uint32_t(y);
 }
 
-// гекс
 const float pi = acos(-1);
-const QPointF sideNormal[6] = { // q r
+const QPointF sideNormal[6] = {
     {  1.0f,  0.0f },
     {  0.5f,  std::cos(pi/6) },
     { -0.5f,  std::cos(pi/6) },
@@ -65,7 +61,7 @@ bool pointInsideHex(const QPointF& p, float hexRadius)
 {
     const float d = hexRadius * std::cos(pi/6);
     for (int i = 0; i < 6; ++i)
-        if (QPointF::dotProduct(p, sideNormal[i]) >= d) // скалярное произведение = длине проекции
+        if (QPointF::dotProduct(p, sideNormal[i]) >= d)
             return false;
     return true;
 }
@@ -125,7 +121,6 @@ bool bfsFrom(HexGrid& grid, HexNode* hex, const QPointF& hexCenter, int startId,
         {
             QPointF np = grid.maze[v].pos + dirVec[d] * step;
 
-            // выход за границу гекса
             if (!pointInsideHex(np - hexCenter, hexRadius))
             {
                 if ((float)rand() / RAND_MAX < CONTINUE_PROB){
@@ -157,16 +152,17 @@ bool bfsFrom(HexGrid& grid, HexNode* hex, const QPointF& hexCenter, int startId,
             int to = grid.addCell(np, step);
             if ((float)rand() / RAND_MAX < CONTINUE_PROB)
             {
-                if (!visitedPlanB.count(to)){
-                    visitedPlanB.insert(to);
-                    planB.push({to, r+1});
+                if (!visitedPlanB.count(v)){
+                    visitedPlanB.insert(v);
+                    planB.push({v, r});
                 }
                 continue;
             }
             if (connectOnly && abs(visited[to]) == 1){
                 connectOnly = false;
-                grid.maze[v].edge[d] = true;
-                grid.maze[to].edge[opposite(d)] = true;
+                grid.maze[v].edge[d] = to;
+                grid.maze[to].edge[opposite(d)] = v;
+
                 ++countEdge;
                 if (visited[to] == -1){
                     q.push({to, r+1});
@@ -178,8 +174,8 @@ bool bfsFrom(HexGrid& grid, HexNode* hex, const QPointF& hexCenter, int startId,
             if (visited[to] > 0)
                 continue;
 
-            grid.maze[v].edge[d] = true;
-            grid.maze[to].edge[opposite(d)] = true;
+            grid.maze[v].edge[d] = to;
+            grid.maze[to].edge[opposite(d)] = v;
             ++countEdge;
             visited[to] = visit;
             q.push({to, r+1});
@@ -189,7 +185,6 @@ bool bfsFrom(HexGrid& grid, HexNode* hex, const QPointF& hexCenter, int startId,
     return true;
 }
 
-//генерация
 void HexGenerator::generate(
     HexGrid& grid,
     HexNode* hex,
@@ -204,18 +199,15 @@ void HexGenerator::generate(
     QPointF hexCenter = axialToPixel(hex->q, hex->r, hexRadius);
 
 
-    // BFS
-
     std::unordered_map<int, int> visited;
     std::unordered_set<int> visitedPlanB;
     visited.reserve(200000);
     visitedPlanB.reserve(200000);
 
-    // старт
     int startId = grid.addCell(start, step);
     bfsFrom(grid, hex, hexCenter, startId, (hex->knownBeforeGen == 6? true : false), hexRadius, step, visited, visitedPlanB);
 
-    // яблоко
+
     if (apple != zero){
         int appleId = grid.addCell(apple, step);
         if (visited[appleId] == 0){

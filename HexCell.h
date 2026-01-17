@@ -8,7 +8,6 @@ public:
 
     bool generated = false;
 
-    // 6 соседей: 0..5
     std::array<HexCell*, 6> neigh{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 
     HexCell(int q_, int r_) : q(q_), r(r_) {}
@@ -16,7 +15,6 @@ public:
     void generate() {
         if (!generated) {
             generated = true;
-            // здесь позже можно добавлять контент клетки
         }
     }
 };

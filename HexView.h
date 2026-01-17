@@ -35,8 +35,8 @@ private:
     QPointF axialToPixel(int q, int r) const;
     QPolygonF hexPolygonAt(const QPointF& center) const;
     int sideFromVector(const QPointF& v) const;
-    bool crossedSides(const QPointF& p, int& s1, int& s2) const;
-    void moveToNeighbor(int side, QPointF delta, bool b);
+    bool crossedSides(const QPointF& p, ArraySequence<int>& res);
+    void moveToNeighbor(int side, QPointF delta);
     void centerCamera();
     QPointF cursorWorldPos() const;
     void spawnApple();
@@ -45,7 +45,6 @@ private:
     void drawApplePointer(QPainter& p);
     QPointF randomPointInHex(const QPointF& hexCenter);
     bool isAppleInHex(HexNode* h) const;
-    MazeCell* cellAt(const QPointF& worldPos);
     void tryTeleportToPath(const QPointF& screenPos);
     HexNode* hexAtWorld(const QPointF& world);
     HexNode* hexAtAxial(int q, int r);
@@ -56,6 +55,15 @@ private:
     void runBfsToNeighbor(Neighbor n);
     bool isExitToNeighbor(int cellId);
     void runBfsToApple();
+    ArraySequence<QPointF> bfsInHex(HexGrid& grid, HexNode* hex, int startId, std::function<bool(int)> isTarget, float hexRadius, bool apple);
+    void drawGeneratedHex(QPainter& p);
+    void drawMaze(QPainter& p);
+    void drawBlackHex(QPainter& p);
+    void drawBFS(QPainter& p);
+    void drawPathCursor(QPainter& p);
+    void drawCursor(QPainter& p);
+    void drawScore(QPainter& p);
+    void drawMessange(QPainter& p);
 
     QPointF apple;
     int score = 0;
@@ -65,7 +73,7 @@ private:
     ArraySequence<QPointF>bfsPath;
     HexGrid grid;
     HexNode* cur = nullptr;
-    QPointF cursor;
+    MazeCell cursor;
 
     QPointF camera;
     QPointF cameraDragOffset;
@@ -81,10 +89,6 @@ private:
 
     QPushButton* navButton;
     QMenu* navMenu;
-
-    bool findApple = false;
-    // сообщения
-    bool showNoAppleHere = false;
     bool showNoPath = false;
 
     QElapsedTimer messageTimer;

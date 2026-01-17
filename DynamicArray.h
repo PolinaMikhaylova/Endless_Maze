@@ -31,7 +31,6 @@ public:
         delete[] data;
     }
 
-    // ===== ACCESS =====
     T Get(int index) const {
         if (index < 0 || index >= size)
             throw std::out_of_range("IndexOutOfRange");
@@ -47,7 +46,6 @@ public:
     int GetSize() const { return size; }
     int GetCapacity() const { return capacity; }
 
-    // ===== RESERVE =====
     void Reserve(int newCapacity) {
         if (newCapacity <= capacity)
             return;
@@ -59,14 +57,12 @@ public:
         capacity = newCapacity;
     }
 
-    // ===== RESIZE =====
     void Resize(int newSize) {
         if (newSize > capacity)
             Reserve(std::max(newSize, capacity * 2 + 1));
         size = newSize;
     }
 
-    // ===== ITERATOR SUPPORT =====
     T* begin() { return data; }
     T* end()   { return data + size; }
     const T* begin() const { return data; }

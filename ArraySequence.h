@@ -8,7 +8,6 @@
 template <class T>
 class ArraySequence : public Sequence<T> {
 public:
-    // ===== ITERATOR =====
     class Iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -39,7 +38,6 @@ public:
         pointer ptr;
     };
 
-    // ===== CONSTRUCTORS =====
     ArraySequence() {
         data = new DynamicArray<T>(0);
     }
@@ -52,13 +50,11 @@ public:
         data = new DynamicArray<T>(*other.data);
     }
 
-    // move constructor
     ArraySequence(ArraySequence<T>&& other) noexcept {
         data = other.data;
         other.data = nullptr;
     }
 
-    // ===== COPY ASSIGNMENT =====
     ArraySequence<T>& operator=(const ArraySequence<T>& other)
     {
         if (this == &other)
@@ -70,14 +66,12 @@ public:
     }
 
 
-    // ===== ITERATOR API =====
     Iterator begin() { return Iterator(data ? data->begin() : nullptr); }
     Iterator end()   { return Iterator(data ? data->end()   : nullptr); }
 
     Iterator begin() const { return Iterator(data ? data->begin() : nullptr); }
     Iterator end()   const { return Iterator(data ? data->end()   : nullptr); }
 
-    // ===== SEQUENCE INTERFACE =====
     T GetFirst() override {
         if (GetLength() == 0)
             throw std::out_of_range("IndexOutOfRange");
@@ -145,13 +139,11 @@ public:
         return this;
     }
 
-    // ===== CLEAR =====
     void Clear() {
         delete data;
         data = new DynamicArray<T>(0);
     }
 
-    // ===== RESERVE =====
     void Reserve(int capacity) {
         if (!data)
             data = new DynamicArray<T>(0);
@@ -169,7 +161,7 @@ public:
             throw std::out_of_range("IndexOutOfRange");
         return (*data)[index];
     }
-    // ===== SWAP =====
+
     void swap(ArraySequence<T>& other)
     {
         std::swap(data, other.data);

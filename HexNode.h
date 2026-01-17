@@ -4,14 +4,14 @@
 #include "ArraySequence.h"
 
 enum class HexState {
-    Linked,     // существует, но не сгенерирован
-    Generated   // посещён
+    Linked,
+    Generated
 };
 
 struct MazeCell
 {
-    QPointF pos;  // мировые координаты
-    bool edge[4] = {false, false, false, false};  // 0=R,1=L,2=U,3=D
+    QPointF pos;
+    int edge[4] = {-1, -1, -1, -1};  // 0=R,1=L,2=U,3=D
 };
 
 static inline uint64_t cellKey(const QPointF& p, float step)
@@ -27,10 +27,8 @@ struct HexNode {
 
     HexState state = HexState::Linked;
 
-    // сколько соседей было известно до генерации
     int knownBeforeGen = -1;
 
-    // 6 соседей по часовой стрелке
     // 0 Right
     // 1 Down-Right
     // 2 Down-Left
@@ -41,7 +39,7 @@ struct HexNode {
         nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr
     };
-    QPointF pending_apple;
+    QPointF pending_apple = {0.666f, 0.666f};
 
 
 };

@@ -1,7 +1,7 @@
 #pragma once
 #include "HexGrid.h"
 #include <QPointF>
-static QPointF zero = {0, 0};
+static QPointF zero = {0.666f, 0.666f};
 class HexGenerator
 {
 public:

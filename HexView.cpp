@@ -18,61 +18,37 @@ static const QPointF dirVec[4] = {
     {  0,  1 }   // D
 };
 
+const float pi = acos(-1);
 static const QPointF sideNormal[6] = {
     {  1.0f,  0.0f },
-    {  0.5f,  0.8660254f },
-    { -0.5f,  0.8660254f },
+    {  0.5f,  std::cos(pi/6) },
+    { -0.5f,  std::cos(pi/6) },
     { -1.0f,  0.0f },
-    { -0.5f, -0.8660254f },
-    {  0.5f, -0.8660254f }
+    { -0.5f, -std::cos(pi/6)},
+    {  0.5f, -std::cos(pi/6) }
 };
 
-static bool pointInsideHex(const QPointF& p, float R)
+
+
+static bool pointInsideHex(const QPointF& p, float hexRadius)
 {
-    const float d = R * 0.8660254f;
+    const float d = hexRadius * std::cos(pi/6);
     for (int i = 0; i < 6; ++i)
         if (QPointF::dotProduct(p, sideNormal[i]) > d)
             return false;
     return true;
 }
 
-bool HexView::crossedSides(const QPointF& p, int& s1, int& s2) const
+
+bool HexView::crossedSides(const QPointF& p, ArraySequence<int>& side)
 {
-    const float d = hexRadius * 0.8660254f;
-    constexpr float EPS = 1e-5f;
-
-    float overflow[6];
-    for (int i = 0; i < 6; ++i)
-        overflow[i] = QPointF::dotProduct(p, sideNormal[i]) - d;
-
-    s1 = -1;
-    s2 = -1;
-
-    float max1 = -1e9f, max2 = -1e9f;
-
-    for (int i = 0; i < 6; ++i)
-    {
-        if (overflow[i] > max1)
-        {
-            max2 = max1; s2 = s1;
-            max1 = overflow[i]; s1 = i;
-        }
-        else if (overflow[i] > max2)
-        {
-            max2 = overflow[i]; s2 = i;
+    const float d = hexRadius * std::cos(pi/6);
+    for (int i = 0; i < 6; ++i){
+        if (QPointF::dotProduct(p, sideNormal[i]) >= d){
+            side.Append(i);
         }
     }
-
-    if (max1 >= -EPS && max2 >= -EPS)
-        return true;    // пересечение по ребру (две грани)
-
-    if (max1 >= -EPS)
-    {
-        s2 = -1;
-        return true;    // пересечение по одной грани
-    }
-
-    return false;
+    return side.GetLength() != 0;
 }
 
 
@@ -89,16 +65,15 @@ HexView::HexView(QWidget* parent)
 
     srand(time(NULL));
     cur = grid.root();
-    QPointF entryWorld = cursorWorldPos();
 
-    HexGenerator::generate(grid, cur, hexRadius, entryWorld);
+    HexGenerator::generate(grid, cur, hexRadius, {0, 0});
+    cursor = grid.maze[grid.addCell({0, 0}, step)];
     score = 0;
     spawnApple();
 
-    cursor = QPointF(0, 0);
     arrowDir = 0;
     zoom = 1.0f;
-    path.Append({ cursorWorldPos() });
+    path.Append( cursor.pos);
     centerCamera();
 
 }
@@ -128,7 +103,7 @@ QPolygonF HexView::hexPolygonAt(const QPointF& c) const
 
 void HexView::centerCamera()
 {
-    QPointF worldCursor = axialToPixel(cur->q, cur->r) + cursor;
+    QPointF worldCursor = cursor.pos;
 
     QPointF screenCenter(width() / 2.0f, height() / 2.0f);
     camera = screenCenter - worldCursor * zoom + cameraDragOffset;
@@ -136,43 +111,17 @@ void HexView::centerCamera()
 
 bool HexView::isAppleInHex(HexNode* h) const
 {
-    QPointF center = axialToPixel(h->q, h->r);
-    QPointF local  = apple - center;
+    QPointF hexCenter = axialToPixel(h->q, h->r);
+    QPointF local  = apple - hexCenter;
     return pointInsideHex(local, hexRadius);
 }
 
-void HexView::moveToNeighbor(int side, QPointF delta, bool b = false)
+void HexView::moveToNeighbor(int side, QPointF delta)
 {
-    QPointF entryWorld = cursorWorldPos();
-    if (!b){
-        cur = cur->neigh[side];
-        if (cur->state != HexState::Generated)
-        {
-            grid.ensureNeighbors(cur);
-            // можно выходить только к НЕ сгенерированным соседям
-            if (isAppleInHex(cur)){
-                HexGenerator::generate(
-                    grid,
-                    cur,
-                    hexRadius,
-                    entryWorld + delta,
-                    apple
-                    );
-            }
-            else{
-                HexGenerator::generate(
-                    grid,
-                    cur,
-                    hexRadius,
-                    entryWorld + delta
-                    );
-            }
-        }
-    }
-    else if (cur->neigh[side]->state != HexState::Generated)
+    QPointF entryWorld = cursor.pos;
+    if (cur->neigh[side]->state != HexState::Generated)
     {
         grid.ensureNeighbors(cur->neigh[side]);
-        // можно выходить только к НЕ сгенерированным соседям
         if (isAppleInHex(cur->neigh[side])){
             HexGenerator::generate(
                 grid,
@@ -192,37 +141,16 @@ void HexView::moveToNeighbor(int side, QPointF delta, bool b = false)
         }
 
     }
-
-    // перенос точки строго на противоположную грань
-
-    if(!b){
-        cursor -= sideNormal[side] * (hexRadius * 1.7320508f);
-    }
-}
-
-MazeCell* HexView::cellAt(const QPointF& worldPos)
-{
-    const float step = hexRadius * 0.05f;
-    for (auto& c : grid.maze)
-    {
-        if (QLineF(c.pos, worldPos).length() < step*0.5f)
-            return &c;
-    }
-    return nullptr;
 }
 
 static int oppositeDir(int d)
 {
-    // 0=R,1=L,2=U,3=D
-    static int opp[4] = {1, 0, 3, 2};
-    return opp[d];
+    return d ^ 1;
 }
 
 
-bool go = true;
 void HexView::keyPressEvent(QKeyEvent* e)
 {
-    const float step = hexRadius * 0.05f;
 
     int dir = -1;
     QPointF delta;
@@ -233,56 +161,40 @@ void HexView::keyPressEvent(QKeyEvent* e)
     else if (e->key() == Qt::Key_Down)  { dir = 3; delta = { 0, step }; arrowDir = 1; }
     else return;
     cameraDragOffset = {0, 0};
-    MazeCell* cell = cellAt(cursorWorldPos());
-    if (!cell) return;
 
-    // движение только по графу
-    if (!cell->edge[dir]){
-        //update();
+    if (cursor.edge[dir] == -1){
         return;
     }
 
-    QPointF next = cursor + delta;
-
-    int s1, s2;
-    bool crossed = crossedSides(next, s1, s2);
-
-    if (crossed)
+    QPointF next = cursor.pos + delta;
+    QPointF hexCenter = axialToPixel(cur->q, cur->r);
+    ArraySequence<int> side;
+    if (crossedSides(next - hexCenter, side))
     {
-        moveToNeighbor(s1, delta, s2 != -1);
-        if (s2 != -1)
-            moveToNeighbor(s2, delta);
 
-        cursor += delta;
-    }
-    else
-    {
-        cursor = next;
+        moveToNeighbor(side[0], delta);
+        if (side.GetLength() != 1){
+            moveToNeighbor(side[1], delta);
+        }
+        cur = cur->neigh[side[0]];
     }
 
-    // яблоко
-    QPointF d = cursorWorldPos() - apple;
-    if (QLineF(QPointF(0,0), d).length() < step * 0.9f)
+    cursor = grid.maze[cursor.edge[dir]];
+
+    if (cursor.pos == apple)
     {
         score++;
         spawnApple();
     }
-    path.Append(cursorWorldPos());
+    path.Append(cursor.pos);
 
     centerCamera();
     update();
 }
 
 
-QPointF HexView::cursorWorldPos() const
-{
-    return axialToPixel(cur->q, cur->r) + cursor;
-}
-
-
 void HexView::wheelEvent(QWheelEvent* e)
 {
-    // мировая точка под центром экрана
     QPointF worldCenter =
         (QPointF(width()/2, height()/2) - camera) / zoom;
 
@@ -318,19 +230,15 @@ void HexView::mouseReleaseEvent(QMouseEvent*)
 
 QPointF HexView::randomPointInHex(const QPointF& hexCenter)
 {
-    const float R = hexRadius;
-    const float gridstep = hexRadius * 0.05f;
 
-    // округляем центр гекса к сетке точек
     QPointF center;
-    center.setX(std::round(hexCenter.x() / gridstep) * gridstep);
-    center.setY(std::round(hexCenter.y() / gridstep) * gridstep);
+    center.setX(std::round(hexCenter.x() / step) * step);
+    center.setY(std::round(hexCenter.y() / step) * step);
 
     while (true)
     {
-        // случайное направление и расстояние
-        float angle = float(rand()) / RAND_MAX * 2.0f * M_PI;
-        float dist  = std::sqrt(float(rand()) / RAND_MAX) * R;
+        float angle = float(rand()) / RAND_MAX * 2.0f * pi;
+        float dist  = std::sqrt(float(rand()) / RAND_MAX) * hexRadius;
 
         QPointF offset(
             std::cos(angle) * dist,
@@ -339,15 +247,13 @@ QPointF HexView::randomPointInHex(const QPointF& hexCenter)
 
         QPointF world = center + offset;
 
-        // проверка, что точка внутри гекса
-        if (!pointInsideHex(world - hexCenter, R))
+        if (!pointInsideHex(world - hexCenter, hexRadius))
             continue;
 
-        // финальная привязка к сетке точек
-        world.setX(std::round(world.x() / gridstep) * gridstep);
-        world.setY(std::round(world.y() / gridstep) * gridstep);
+        world.setX(std::round(world.x() / step) * step);
+        world.setY(std::round(world.y() / step) * step);
 
-        return world; // мировые координаты
+        return world;
     }
 }
 
@@ -355,17 +261,14 @@ QPointF HexView::randomPointInHex(const QPointF& hexCenter)
 
 void HexView::spawnApple()
 {
-    // берём случайный НЕ сгенерированный гекс
-    std::vector<HexNode*> candidates;
-    for (auto* n : grid.all())
-        if (n->state != HexState::Generated)
-            candidates.push_back(n);
+    ArraySequence<HexNode*> candidates;
+    for (auto* n : grid.all()){
+        if (n->state != HexState::Generated){
+            candidates.Append(n);
+        }
+    }
 
-    if (candidates.empty())
-        return;
-
-    HexNode* hex = candidates[rand() % candidates.size()];
-    if (!hex) return;
+    HexNode* hex = candidates[rand() % candidates.GetLength()];
 
     QPointF hexCenter = axialToPixel(hex->q, hex->r);
     apple = randomPointInHex(hexCenter);
@@ -405,25 +308,22 @@ void HexView::drawApplePointer(QPainter& p)
 
     QPointF v = target - center;
     double len = std::hypot(v.x(), v.y());
-    if (len < 1.0) return;
 
     QPointF dir = v / len;
 
     double R = std::min(width(), height()) * 0.45;
     QPointF pos = center + dir * R;
 
-    // угол направления
-    double angle = std::atan2(dir.y(), dir.x()) * 180.0 / M_PI;
+    double angle = std::atan2(dir.y(), dir.x()) * 180.0 / pi;
 
     QRectF arcRect(
-        pos.x() - 18, pos.y() - 18,
-        36, 36
+        
+        pos.x() - 18, pos.y() - 18,36, 36
         );
 
     p.setPen(QPen(QColor(220, 40, 40, 180), 4));
     p.setBrush(Qt::NoBrush);
 
-    // дуга смотрит в сторону яблока
     p.drawArc(
         arcRect,
         int((-angle - 60) * 16),
@@ -477,31 +377,24 @@ void HexView::tryTeleportToPath(const QPointF& screenPos)
     }
 
     if (best == -1)
-        return; // не попали точно по пути
+        return;
 
-    // целевая точка
     QPointF targetWorld = path[best];
 
-    // находим гекс
     HexNode* targetHex = hexAtWorld(targetWorld);
     if (!targetHex || targetHex->state != HexState::Generated)
-        return; // защита от мусора
+        return;
 
-    // обновляем текущий гекс
     cur = targetHex;
 
-    // восстанавливаем текущую позицию
     QPointF hexCenter = axialToPixel(cur->q, cur->r);
-    cursor = targetWorld - hexCenter;
+    cursor = grid.maze[grid.addCell(targetWorld, step)];
 
-    // очистка хвостов
     arrowDir = 0;
 
-    // можно обрезать путь до этой точки
-    // path.resize(best + 1);
     cameraDragOffset = {0, 0};
     path.Append({step/2, step/2});
-    path.Append(cursorWorldPos());
+    path.Append(cursor.pos);
     centerCamera();
     update();
 }
@@ -516,16 +409,7 @@ void HexView::mousePressEvent(QMouseEvent* e)
         lastMouse = e->pos();
     }
 }
-
-
-void HexView::paintEvent(QPaintEvent*)
-{
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.fillRect(rect(), QColor(30, 30, 30));
-
-
-    // гексы и точки
+void HexView::drawGeneratedHex(QPainter& p){
     for (auto* n : grid.all())
     {
         QPointF hexWorld = axialToPixel(n->q, n->r);
@@ -535,23 +419,18 @@ void HexView::paintEvent(QPaintEvent*)
 
         p.setPen(Qt::NoPen);
         if (n->state == HexState::Generated){
-            p.setBrush( QColor(245, 222, 179));
+            p.setBrush(QColor(215, 192, 149));
             p.drawPolygon(h);
         }
 
     }
 
+}
+void HexView::drawMaze(QPainter& p){
 
 
-
-
-    // внутренний лабиринт
-    const float step = hexRadius * 0.05f;
-    QPointF zero = {step/2, step/2};
-
-
-    float roadOuter = step * 0.35f; // общая ширина дороги (чёрный)
-    float roadInner = step * 0.20f; // внутренняя (цвет гекса)
+    float roadOuter = step * 0.70f;
+    float roadInner = step * 0.50f;
 
 
     p.setPen(QPen(Qt::black, roadOuter * zoom));
@@ -560,13 +439,13 @@ void HexView::paintEvent(QPaintEvent*)
     {
         QPointF p0 = c.pos * zoom + camera;
 
-        if (c.edge[0])
+        if (c.edge[0]!= -1)
             p.drawLine(p0, (c.pos + QPointF(step, 0)) * zoom + camera);
-        if (c.edge[1])
+        if (c.edge[1]!= -1)
             p.drawLine(p0, (c.pos - QPointF(step, 0)) * zoom + camera);
-        if (c.edge[2])
+        if (c.edge[2]!= -1)
             p.drawLine(p0, (c.pos - QPointF(0, step)) * zoom + camera);
-        if (c.edge[3])
+        if (c.edge[3]!= -1)
             p.drawLine(p0, (c.pos + QPointF(0, step)) * zoom + camera);
     }
 
@@ -575,16 +454,19 @@ void HexView::paintEvent(QPaintEvent*)
     {
         QPointF p0 = c.pos * zoom + camera;
 
-        if (c.edge[0])
+        if (c.edge[0] != -1)
             p.drawLine(p0, (c.pos + QPointF(step, 0)) * zoom + camera);
-        if (c.edge[1])
+        if (c.edge[1]!= -1)
             p.drawLine(p0, (c.pos - QPointF(step, 0)) * zoom + camera);
-        if (c.edge[2])
+        if (c.edge[2]!= -1)
             p.drawLine(p0, (c.pos - QPointF(0, step)) * zoom + camera);
-        if (c.edge[3])
+        if (c.edge[3]!= -1)
             p.drawLine(p0, (c.pos + QPointF(0, step)) * zoom + camera);
     }
 
+}
+
+void HexView::drawBlackHex(QPainter& p){
     for (auto* n : grid.all())
     {
         QPointF hexWorld = axialToPixel(n->q, n->r);
@@ -598,9 +480,9 @@ void HexView::paintEvent(QPaintEvent*)
         }
 
     }
+}
 
-
-    // BFS путь
+void HexView::drawBFS(QPainter& p){
     if (bfsPath.GetLength() > 1)
     {
         QPen pen(QColor(255, 100, 100));
@@ -613,41 +495,41 @@ void HexView::paintEvent(QPaintEvent*)
             pp.lineTo(bfsPath[i] * zoom + camera);
         p.drawPath(pp);
     }
+}
 
+void HexView::drawPathCursor(QPainter& p){
+    QPointF zero = {step/2, step/2};
+    QPen pen(QColor(50, 200, 255));
+    pen.setWidthF(2.0 * zoom);
+    p.setPen(pen);
+    p.setBrush(Qt::NoBrush);
 
-
-    // путь курсора
-    if (path.GetLength() > 1)
+    QPainterPath pp;
+    QPointF first = path[0] * zoom + camera;
+    pp.moveTo(first);
+    bool go = true;
+    for (size_t i = 1; i < path.GetLength(); ++i)
     {
-        QPen pen(QColor(50, 200, 255));
-        pen.setWidthF(2.0 * zoom);
-        p.setPen(pen);
-        p.setBrush(Qt::NoBrush);
+        QPointF pt = path[i] * zoom + camera;
 
-        QPainterPath pp;
-        QPointF first = path[0] * zoom + camera;
-        pp.moveTo(first);
-        bool go = true;
-        for (size_t i = 1; i < path.GetLength(); ++i)
-        {
-            QPointF pt = path[i] * zoom + camera;
-
-            if (pt == zero * zoom + camera){
-                go = false;
-                continue;
-            }
-            if (!go){
-                pp.moveTo(pt);
-                go = true;
-            }
-            pp.lineTo(pt);
+        if (pt == zero * zoom + camera){
+            go = false;
+            continue;
         }
-
-        p.drawPath(pp);
+        if (!go){
+            pp.moveTo(pt);
+            go = true;
+            continue;
+        }
+        pp.lineTo(pt);
     }
+
+    p.drawPath(pp);
+}
+
+void HexView::drawCursor(QPainter& p){
     QPointF center =
-        axialToPixel(cur->q, cur->r) * zoom +
-        cursor * zoom +
+        cursor.pos * zoom +
         camera;
 
     QPointF dir;
@@ -668,9 +550,9 @@ void HexView::paintEvent(QPaintEvent*)
     p.setPen(Qt::NoPen);
     p.drawPolygon(arrow);
 
-    drawApple(p);
+}
 
-    // панель очков
+void HexView::drawScore(QPainter& p){
     QString text = QString("Score: %1").arg(score);
 
     QFont f = p.font();
@@ -711,20 +593,16 @@ void HexView::paintEvent(QPaintEvent*)
         Qt::AlignLeft | Qt::AlignVCenter,
         text
         );
+}
 
-
+void HexView::drawMessange(QPainter& p){
     if (messageTimer.isValid() &&
         messageTimer.elapsed() < MESSAGE_TIME_MS)
     {
         QString text;
         QColor bg;
 
-        if (showNoAppleHere)
-        {
-            text = "Яблоко не в этом гексе";
-            bg = QColor(220, 180, 50, 160); // полупрозрачный
-        }
-        else if (showNoPath)
+        if (showNoPath)
         {
             text = "❌ Пути нет";
             bg = QColor(200, 60, 60, 160); // полупрозрачный
@@ -748,12 +626,49 @@ void HexView::paintEvent(QPaintEvent*)
 
         QFont f = p.font();
         f.setBold(true);
-        f.setPointSizeF(14); // можно без zoom
+        f.setPointSizeF(14);
         p.setFont(f);
 
-        p.setPen(QColor(255, 255, 255, 220)); // слегка прозрачный текст
+        p.setPen(QColor(255, 255, 255, 220));
         p.drawText(box, Qt::AlignCenter, text);
     }
+}
+
+void HexView::paintEvent(QPaintEvent*)
+{
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.fillRect(rect(), QColor(30, 30, 30));
+
+
+    // гексы
+    drawGeneratedHex(p);
+
+
+    // внутренний лабиринт
+    drawMaze(p);
+
+    // гексы
+    drawBlackHex(p);
+
+    // bfs путь
+    drawBFS(p);
+
+
+    // путь курсора
+    drawPathCursor(p);
+
+    // курсор
+    drawCursor(p);
+
+    // яблоко
+    drawApple(p);
+
+    // панель очков
+    drawScore(p);
+
+    // сообщение
+    drawMessange(p);
 }
 
 
@@ -761,19 +676,18 @@ int targetSide = -1;
 
 bool HexView::isExitToNeighbor(int cellId)
 {
-    const float step = hexRadius * 0.05f;
-    const MazeCell& c = grid.maze[cellId];
+    MazeCell c = grid.maze[cellId];
 
     QPointF np = c.pos;
 
-    // вышли за текущий гекс
     if (!pointInsideHex(np - axialToPixel(cur->q, cur->r), hexRadius))
     {
-        int s1, s2;
         QPointF local = np - axialToPixel(cur->q, cur->r);
-        if (crossedSides(local, s1, s2))
+
+        ArraySequence<int> side;
+        if (crossedSides(local, side))
         {
-            if (s1 == targetSide || s2 == targetSide)
+            if (side[0] == targetSide ||(side.GetLength()!=1 &&  side[1] == targetSide))
                 return true;
         }
     }
@@ -794,12 +708,13 @@ void HexView::setupNavButton()
 }
 
 
-ArraySequence<QPointF> bfsInHex(
+ArraySequence<QPointF> HexView::bfsInHex(
     HexGrid& grid,
     HexNode* hex,
     int startId,
     std::function<bool(int)> isTarget,
-    float hexRadius
+    float hexRadius,
+    bool apple
     )
 {
     std::queue<int> q;
@@ -813,23 +728,23 @@ ArraySequence<QPointF> bfsInHex(
 
         if (isTarget(v))
         {
-            ArraySequence<QPointF> res;
+            ArraySequence<QPointF> side;
             for (int cur = v; cur != -1; cur = parent[cur])
-                res.Append(grid.maze[cur].pos);
-            return res;
+                side.Append(grid.maze[cur].pos);
+            return side;
         }
 
+        if (!apple && pointInsideHex(grid.maze[v].pos, step)){
+            continue;
+        }
         for (int d = 0; d < 4; ++d)
         {
-            if (!grid.maze[v].edge[d])
+            if (grid.maze[v].edge[d] == -1)
                 continue;
 
-            QPointF np = grid.maze[v].pos + dirVec[d] * (hexRadius * 0.05f);
-            auto it = grid.index.find(cellKey(np, hexRadius * 0.05f));
-            if (it == grid.index.end())
-                continue;
+            QPointF np = grid.maze[v].pos + dirVec[d] * step;
+            int to = grid.addCell(np, step);
 
-            int to = it->second;
             if (parent.count(to))
                 continue;
 
@@ -844,7 +759,7 @@ void HexView::runBfsToNeighbor(Neighbor n)
 {
     targetSide = static_cast<int>(n);
 
-    int startId = grid.addCell(cursorWorldPos(), step);
+    int startId = grid.addCell(cursor.pos, step);
 
 
     bfsPath = bfsInHex(
@@ -852,16 +767,14 @@ void HexView::runBfsToNeighbor(Neighbor n)
         cur,
         startId,
         [this](int id){ return isExitToNeighbor(id); },
-        hexRadius
+        hexRadius,
+        false
         );
     if (bfsPath.GetLength() > 1)
     {
-        // путь найден — ничего не показываем
-        showNoAppleHere = false;
         showNoPath = false;
     }
     else{
-        showNoAppleHere = false;
         showNoPath = true;
         messageTimer.restart();
     }
@@ -870,36 +783,25 @@ void HexView::runBfsToNeighbor(Neighbor n)
 
 void HexView::runBfsToApple()
 {
-    int startId = grid.addCell(cursorWorldPos(), step);
+    int startId = grid.addCell(cursor.pos, step);
 
     bfsPath = bfsInHex(
         grid,
         cur,
         startId,
         [this](int id){
-            return QLineF(grid.maze[id].pos, apple).length()
-            < hexRadius * 0.05f;
+            return grid.maze[id].pos == apple;
         },
-        hexRadius
+        hexRadius,
+        true
         );
     if (bfsPath.GetLength() > 1)
     {
-        // путь найден — ничего не показываем
-        showNoAppleHere = false;
         showNoPath = false;
     }
     else
     {
-        if (!isAppleInHex(cur))
-        {
-            showNoAppleHere = true;
-            showNoPath = false;
-        }
-        else
-        {
-            showNoAppleHere = false;
-            showNoPath = true;
-        }
+        showNoPath = true;
         messageTimer.restart();
     }
 
@@ -925,6 +827,9 @@ void HexView::setupNavMenu()
 
     navMenu->addSeparator();
 
+    QAction* toPoint = navMenu->addAction("Дойти до точки");
+
+    navMenu->addSeparator();
     QAction* toApple = navMenu->addAction("Дойти до яблока");
 
 
@@ -956,7 +861,7 @@ void HexView::setupNavMenu()
 
     connect(toApple, &QAction::triggered, this, [this]() {
         runBfsToApple();
-        findApple = true;
         update();
     });
+
 }

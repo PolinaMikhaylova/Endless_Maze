@@ -9,9 +9,8 @@ public:
     HexNode* root();
     const ArraySequence<HexNode*>& all() const;
     void ensureNeighbors(HexNode* n);
-    ArraySequence<MazeCell> maze;    // лабиринт внутри гекса
+    ArraySequence<MazeCell> maze;
 
-    // добавление ячейки
     std::unordered_map<uint64_t, int> index;
     int addCell(const QPointF& p, float step)
     {
@@ -34,6 +33,6 @@ private:
     HexNode* getOrCreate(int q, int r);
 
     HexNode* start = nullptr;
-    ArraySequence<HexNode*> nodes; // поменять на LazySequence
+    ArraySequence<HexNode*> nodes;
 
 };
