@@ -238,7 +238,7 @@ void HexGenerator::generate(
     for (int i =0; i < 3; ++i){
         if (hex->pending_apple[i] != QPointF()){
             int appleId = grid.addCell(hex->pending_apple[i], step);
-            if (visited[appleId] == 0){
+            if (visited[appleId] == 1){
                 bfsFrom(grid, hex, hexCenter, appleId, true, hexRadius, step, visit++, visited, visitedPlanB, countEdge);
             }
         }
