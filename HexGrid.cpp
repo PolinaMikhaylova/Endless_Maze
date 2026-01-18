@@ -21,7 +21,7 @@ HexNode* HexGrid::root()
     return start;
 }
 
-const ArraySequence<HexNode*>& HexGrid::all() const
+const LazySequence<HexNode*>& HexGrid::all() const
 {
     return nodes;
 }
@@ -31,16 +31,19 @@ HexNode* HexGrid::createNode(int q, int r)
     HexNode* n = new HexNode;
     n->q = q;
     n->r = r;
-    nodes.Append(n);
+    nodes = *nodes.Append(n);
+
     return n;
 }
 
 HexNode* HexGrid::getOrCreate(int q, int r)
 {
-    for (auto* n : nodes)
+    int N = nodes.GetMaterializedCount();
+    for (int i = 0; i < N; ++i) {
+        HexNode* n = nodes.Get(i);
         if (n->q == q && n->r == r)
             return n;
-
+    }
     return createNode(q, r);
 }
 
@@ -49,7 +52,6 @@ void HexGrid::ensureNeighbors(HexNode* n)
     for (int i = 0; i < 6; ++i)
     {
         if (n->neigh[i]) continue;
-
         int nq = n->q + dq[i];
         int nr = n->r + dr[i];
 

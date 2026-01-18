@@ -16,6 +16,7 @@ enum class Neighbor {
 };
 
 
+
 class HexView : public QWidget {
     Q_OBJECT
 public:
@@ -29,6 +30,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent*) override;
     void resizeEvent(QResizeEvent*) override;
     void paintEvent(QPaintEvent*) override;
+    void mouseDoubleClickEvent(QMouseEvent* e) override;
 
 
 private:
@@ -39,10 +41,10 @@ private:
     void moveToNeighbor(int side, QPointF delta);
     void centerCamera();
     QPointF cursorWorldPos() const;
-    void spawnApple();
-    bool isAppleOnScreen() const;
+    void spawnApple(int i);
+    bool isAppleOnScreen(int i) const;
     void drawApple(QPainter& p);
-    void drawApplePointer(QPainter& p);
+    void drawApplePointer(QPainter& p, int i);
     QPointF randomPointInHex(const QPointF& hexCenter);
     bool isAppleInHex(HexNode* h) const;
     void tryTeleportToPath(const QPointF& screenPos);
@@ -64,9 +66,13 @@ private:
     void drawCursor(QPainter& p);
     void drawScore(QPainter& p);
     void drawMessange(QPainter& p);
+    void runBfsToGoal();
+    void drawGoal(QPainter& p);
 
-    QPointF apple;
+
+    std::array<QPointF, 3> apples;
     int score = 0;
+    QPointF goal;
 
 
     ArraySequence<QPointF> path;
@@ -89,6 +95,7 @@ private:
 
     QPushButton* navButton;
     QMenu* navMenu;
+
     bool showNoPath = false;
 
     QElapsedTimer messageTimer;
@@ -97,6 +104,3 @@ private:
 
 
 };
-
-
-

@@ -10,6 +10,6 @@ public:
         HexNode* hex,
         const float hexRadius,
         const QPointF& start,
-        const QPointF& apple = zero
+        const std::array<QPointF, 3>& apples = {zero, zero, zero}
         );
 };

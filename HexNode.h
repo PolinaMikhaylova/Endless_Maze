@@ -27,7 +27,7 @@ struct HexNode {
 
     HexState state = HexState::Linked;
 
-    int knownBeforeGen = -1;
+    int knownBeforeGen = 0;
 
     // 0 Right
     // 1 Down-Right
@@ -39,7 +39,5 @@ struct HexNode {
         nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr
     };
-    QPointF pending_apple = {0.666f, 0.666f};
-
-
+    std::array<QPointF, 3> pending_apple = {QPointF(), QPointF(), QPointF()};
 };

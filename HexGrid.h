@@ -1,13 +1,14 @@
 #pragma once
 #include "ArraySequence.h"
 #include "HexNode.h"
+#include "LazySequence.h"
 
 class HexGrid
 {
 public:
     HexGrid();
     HexNode* root();
-    const ArraySequence<HexNode*>& all() const;
+    const LazySequence<HexNode*>& all() const;
     void ensureNeighbors(HexNode* n);
     ArraySequence<MazeCell> maze;
 
@@ -33,6 +34,6 @@ private:
     HexNode* getOrCreate(int q, int r);
 
     HexNode* start = nullptr;
-    ArraySequence<HexNode*> nodes;
+    LazySequence<HexNode*> nodes;
 
 };

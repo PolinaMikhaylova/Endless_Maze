@@ -34,7 +34,7 @@ static bool pointInsideHex(const QPointF& p, float hexRadius)
 {
     const float d = hexRadius * std::cos(pi/6);
     for (int i = 0; i < 6; ++i)
-        if (QPointF::dotProduct(p, sideNormal[i]) > d)
+        if (QPointF::dotProduct(p, sideNormal[i]) >= d)
             return false;
     return true;
 }
@@ -69,7 +69,10 @@ HexView::HexView(QWidget* parent)
     HexGenerator::generate(grid, cur, hexRadius, {0, 0});
     cursor = grid.maze[grid.addCell({0, 0}, step)];
     score = 0;
-    spawnApple();
+    for (int i = 0; i < 3; ++i){
+        spawnApple(i);
+    }
+
 
     arrowDir = 0;
     zoom = 1.0f;
@@ -111,9 +114,13 @@ void HexView::centerCamera()
 
 bool HexView::isAppleInHex(HexNode* h) const
 {
-    QPointF hexCenter = axialToPixel(h->q, h->r);
-    QPointF local  = apple - hexCenter;
-    return pointInsideHex(local, hexRadius);
+    bool has = false;
+    for (int i = 0; i < 3; ++i){
+        QPointF hexCenter = axialToPixel(h->q, h->r);
+        QPointF local  = apples[i] - hexCenter;
+        has |= pointInsideHex(local, hexRadius);
+    }
+    return has;
 }
 
 void HexView::moveToNeighbor(int side, QPointF delta)
@@ -128,7 +135,7 @@ void HexView::moveToNeighbor(int side, QPointF delta)
                 cur->neigh[side],
                 hexRadius,
                 entryWorld + delta,
-                apple
+                apples
                 );
         }
         else{
@@ -181,11 +188,14 @@ void HexView::keyPressEvent(QKeyEvent* e)
 
     cursor = grid.maze[cursor.edge[dir]];
 
-    if (cursor.pos == apple)
-    {
-        score++;
-        spawnApple();
+    for (int i = 0; i < 3; ++i){
+        if (cursor.pos == apples[i])
+        {
+            score++;
+            spawnApple(i);
+        }
     }
+
     path.Append(cursor.pos);
 
     centerCamera();
@@ -223,6 +233,36 @@ void HexView::mouseMoveEvent(QMouseEvent* e)
     }
 }
 
+void HexView::mouseDoubleClickEvent(QMouseEvent* e)
+{
+    QPointF worldClick = (e->pos() - camera) / zoom;
+
+    const float MAX_DIST2 = step * step;
+    int best = -1;
+    float bestDist2 = MAX_DIST2;
+
+    for (int ind = 0; ind < grid.maze.GetLength();++ind) {
+        QPointF d = grid.maze[ind].pos - worldClick;
+        float dist2 = d.x()*d.x() + d.y()*d.y();
+        if (dist2 < bestDist2) {
+            bestDist2 = dist2;
+            best = ind;
+        }
+    }
+
+
+    if (best == -1) {
+        goal = QPointF();
+        update();
+        return;
+    }
+
+
+    goal = grid.maze[best].pos;
+    update();
+}
+
+
 void HexView::mouseReleaseEvent(QMouseEvent*)
 {
     dragging = false;
@@ -259,10 +299,12 @@ QPointF HexView::randomPointInHex(const QPointF& hexCenter)
 
 
 
-void HexView::spawnApple()
+void HexView::spawnApple(int i)
 {
     ArraySequence<HexNode*> candidates;
-    for (auto* n : grid.all()){
+    int N = grid.all().GetMaterializedCount();
+    for (int i = 0; i < N; ++i) {
+        HexNode* n = grid.all().Get(i);
         if (n->state != HexState::Generated){
             candidates.Append(n);
         }
@@ -271,7 +313,7 @@ void HexView::spawnApple()
     HexNode* hex = candidates[rand() % candidates.GetLength()];
 
     QPointF hexCenter = axialToPixel(hex->q, hex->r);
-    apple = randomPointInHex(hexCenter);
+    apples[i] = randomPointInHex(hexCenter);
 }
 
 
@@ -283,28 +325,31 @@ void HexView::spawnApple()
 
 void HexView::drawApple(QPainter& p)
 {
-    QPointF screen = apple * zoom + camera;
+    for (int i = 0; i < 3; ++i){
+        QPointF screen = apples[i] * zoom + camera;
 
-    p.setPen(Qt::NoPen);
-    p.setBrush(QColor(220, 40, 40));
-    p.drawEllipse(screen, 2.0f * zoom, 2.0f * zoom);
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(220, 40, 40));
+        p.drawEllipse(screen, 2.0f * zoom, 2.0f * zoom);
 
-    if (!isAppleOnScreen())
-        drawApplePointer(p);
+        if (!isAppleOnScreen(i))
+            drawApplePointer(p, i);
+    }
+
 }
 
 
 
-bool HexView::isAppleOnScreen() const
+bool HexView::isAppleOnScreen(int i) const
 {
-    QPointF s = apple * zoom + camera;
+    QPointF s = apples[i] * zoom + camera;
     return rect().contains(s.toPoint());
 }
 
-void HexView::drawApplePointer(QPainter& p)
+void HexView::drawApplePointer(QPainter& p, int i)
 {
     QPointF center(width()/2.0, height()/2.0);
-    QPointF target = apple * zoom + camera;
+    QPointF target = apples[i] * zoom + camera;
 
     QPointF v = target - center;
     double len = std::hypot(v.x(), v.y());
@@ -333,8 +378,9 @@ void HexView::drawApplePointer(QPainter& p)
 
 HexNode* HexView::hexAtAxial(int q, int r)
 {
-    for (HexNode* n : grid.all())
-    {
+    int N = grid.all().GetMaterializedCount();
+    for (int i = 0; i < N; ++i) {
+        HexNode* n = grid.all().Get(i);
         if (n->q == q && n->r == r)
             return n;
     }
@@ -410,8 +456,9 @@ void HexView::mousePressEvent(QMouseEvent* e)
     }
 }
 void HexView::drawGeneratedHex(QPainter& p){
-    for (auto* n : grid.all())
-    {
+    int N = grid.all().GetMaterializedCount();
+    for (int i = 0; i < N; ++i) {
+        HexNode* n = grid.all().Get(i);
         QPointF hexWorld = axialToPixel(n->q, n->r);
         QPointF c = hexWorld * zoom + camera;
 
@@ -467,8 +514,9 @@ void HexView::drawMaze(QPainter& p){
 }
 
 void HexView::drawBlackHex(QPainter& p){
-    for (auto* n : grid.all())
-    {
+    int N = grid.all().GetMaterializedCount();
+    for (int i = 0; i < N; ++i) {
+        HexNode* n = grid.all().Get(i);
         QPointF hexWorld = axialToPixel(n->q, n->r);
         QPointF c = hexWorld * zoom + camera;
 
@@ -629,10 +677,33 @@ void HexView::drawMessange(QPainter& p){
         f.setPointSizeF(14);
         p.setFont(f);
 
-        p.setPen(QColor(255, 255, 255, 220));
+        p.setPen(QColor(255, 255, 255, 220)); // слегка прозрачный текст
         p.drawText(box, Qt::AlignCenter, text);
     }
 }
+
+void HexView::drawGoal(QPainter& p) {
+    if (goal.isNull()) return;
+
+    float worldSize = step * 0.2f;
+    float size = worldSize * zoom;
+
+    QPen pen(Qt::red, 2);
+    p.setPen(pen);
+    p.setBrush(Qt::NoBrush);
+
+    QPointF screenGoal = goal * zoom + camera;
+
+    p.drawLine(screenGoal.x() - size, screenGoal.y() - size,
+               screenGoal.x() + size, screenGoal.y() + size);
+
+    p.drawLine(screenGoal.x() + size, screenGoal.y() - size,
+               screenGoal.x() - size, screenGoal.y() + size);
+}
+
+
+
+
 
 void HexView::paintEvent(QPaintEvent*)
 {
@@ -663,6 +734,9 @@ void HexView::paintEvent(QPaintEvent*)
 
     // яблоко
     drawApple(p);
+
+    // цель
+    drawGoal(p);
 
     // панель очков
     drawScore(p);
@@ -734,7 +808,7 @@ ArraySequence<QPointF> HexView::bfsInHex(
             return side;
         }
 
-        if (!apple && pointInsideHex(grid.maze[v].pos, step)){
+        if (!apple && !pointInsideHex(grid.maze[v].pos - axialToPixel(cur->q, cur->r), hexRadius)){
             continue;
         }
         for (int d = 0; d < 4; ++d)
@@ -790,7 +864,39 @@ void HexView::runBfsToApple()
         cur,
         startId,
         [this](int id){
-            return grid.maze[id].pos == apple;
+            for (int i = 0; i < 3; ++i){
+                if (grid.maze[id].pos == apples[i]){
+                    return true;
+                }
+            }
+            return false;
+        },
+        hexRadius,
+        true
+        );
+    if (bfsPath.GetLength() > 1)
+    {
+        showNoPath = false;
+    }
+    else
+    {
+        showNoPath = true;
+        messageTimer.restart();
+    }
+
+
+}
+
+void HexView::runBfsToGoal()
+{
+    int startId = grid.addCell(cursor.pos, step);
+
+    bfsPath = bfsInHex(
+        grid,
+        cur,
+        startId,
+        [this](int id){
+            return grid.maze[id].pos == goal;
         },
         hexRadius,
         true
@@ -809,8 +915,6 @@ void HexView::runBfsToApple()
 }
 
 
-
-
 void HexView::setupNavMenu()
 {
     navMenu = new QMenu(this);
@@ -827,7 +931,8 @@ void HexView::setupNavMenu()
 
     navMenu->addSeparator();
 
-    QAction* toPoint = navMenu->addAction("Дойти до точки");
+    QAction* toPoint = navMenu->addAction("Построить маршрут до точки");
+
 
     navMenu->addSeparator();
     QAction* toApple = navMenu->addAction("Дойти до яблока");
@@ -863,5 +968,9 @@ void HexView::setupNavMenu()
         runBfsToApple();
         update();
     });
-
+    connect(toPoint, &QAction::triggered, this, [this]() {
+        runBfsToGoal();
+        update();
+    });
 }
+

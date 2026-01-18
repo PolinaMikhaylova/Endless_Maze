@@ -24,6 +24,8 @@ private:
     Direction direction;
     bool infinite = true;
 
+    template<typename> friend class LazySequence;
+
 public:
     Generator(LazySequence<T>* owner,
               std::function<T(Sequence<T>*)> rule,
@@ -376,4 +378,22 @@ public:
         }
         return out.str();
     }
+    void swap(LazySequence& other) noexcept {
+        std::swap(items, other.items);
+        std::swap(forwardGen, other.forwardGen);
+        std::swap(backwardGen, other.backwardGen);
+        std::swap(zeroIndex, other.zeroIndex);
+
+        if (forwardGen) forwardGen->owner = this;
+        if (backwardGen) backwardGen->owner = this;
+        if (other.forwardGen) other.forwardGen->owner = &other;
+        if (other.backwardGen) other.backwardGen->owner = &other;
+    }
+
+    LazySequence<T>& operator=(LazySequence<T> other) {
+        swap(other);
+        return *this;
+    }
+
 };
+
