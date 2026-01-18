@@ -68,6 +68,7 @@ private:
     void drawMessange(QPainter& p);
     void runBfsToGoal();
     void drawGoal(QPainter& p);
+    QPointF pixelToAxial(const QPointF& p) const;
 
 
     std::array<QPointF, 3> apples;

@@ -362,8 +362,8 @@ void HexView::drawApplePointer(QPainter& p, int i)
     double angle = std::atan2(dir.y(), dir.x()) * 180.0 / pi;
 
     QRectF arcRect(
-        
-        pos.x() - 18, pos.y() - 18,36, 36
+
+            pos.x() - 18, pos.y() - 18,36, 36
         );
 
     p.setPen(QPen(QColor(220, 40, 40, 180), 4));
@@ -389,17 +389,40 @@ HexNode* HexView::hexAtAxial(int q, int r)
 
 
 
+QPointF HexView::pixelToAxial(const QPointF& p) const
+{
+    float q = (sqrt(3.f)/3.f * p.x() - 1.f/3.f * p.y()) / hexRadius;
+    float r = (2.f/3.f * p.y()) / hexRadius;
+    return { q, r };
+}
+
+
 HexNode* HexView::hexAtWorld(const QPointF& world)
 {
-    float qf = (std::sqrt(3.0f)/3 * world.x()
-                - 1.0f/3 * world.y()) / hexRadius;
-    float rf = (2.0f/3 * world.y()) / hexRadius;
+    QPointF a = pixelToAxial(world);
 
-    int q = int(std::round(qf));
-    int r = int(std::round(rf));
+    float x = a.x();
+    float z = a.y();
+    float y = -x - z;
 
-    return HexView::hexAtAxial(q, r);
+    int rx = round(x);
+    int ry = round(y);
+    int rz = round(z);
+
+    float dx = abs(rx - x);
+    float dy = abs(ry - y);
+    float dz = abs(rz - z);
+
+    if (dx > dy && dx > dz)
+        rx = -ry - rz;
+    else if (dy > dz)
+        ry = -rx - rz;
+    else
+        rz = -rx - ry;
+
+    return hexAtAxial(rx, rz);
 }
+
 
 
 void HexView::tryTeleportToPath(const QPointF& screenPos)
