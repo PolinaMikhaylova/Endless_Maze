@@ -69,7 +69,7 @@ bool pointInsideHex(const QPointF& p, float hexRadius)
 QPointF axialToPixel(int q, int r, float hexRadius)
 {
     return {
-            hexRadius * (2 * cos(pi/6) * q + cos(pi/6) * r),
+        hexRadius * (2 * cos(pi/6) * q + cos(pi/6) * r),
         hexRadius * (1.5f * r)
     };
 }
@@ -131,12 +131,11 @@ bool bfsFrom(HexGrid& grid, HexNode* hex, const QPointF& hexCenter, int startId,
                     continue;
                 }
                 ArraySequence<int> sides;
-                if (boundarySide(np, hexRadius, hex, sides)){
+                if (boundarySide(np - hexCenter, hexRadius, hex, sides)){
                     continue;
                 }
                 for (auto& side: sides){
                     HexNode* neigh = hex->neigh[side];
-                    if (neigh->state == HexState::Generated) continue;
                     int to = grid.addCell(np, step);
                     int back = opposite(d);
                     grid.maze[v].edge[d] = to;
